@@ -1,5 +1,7 @@
 # Nexo Assist
 
+> **Como usar e testar (contas, roteiro e WhatsApp): [GUIA_DE_USO.md](GUIA_DE_USO.md)**
+
 Dois projetos independentes, cada um com seu repositório git, Dockerfile e README (deploy na Railway):
 
 | Pasta | O que é |
