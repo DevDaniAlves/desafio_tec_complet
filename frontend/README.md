@@ -24,10 +24,15 @@ Scripts: `npm run typecheck` · `npm run build` (gera `dist/`).
 ## Deploy na Railway
 
 1. Crie um serviço a partir deste repositório (build pelo `Dockerfile`: Vite + nginx).
-2. Defina a variável **`VITE_API_URL`** com a URL pública do backend (ex.: `https://nexo-api.up.railway.app`). Ela é lida **no build**; ao mudar, faça um novo deploy.
+2. Defina a variável **`VITE_API_URL`** com a URL pública do backend (ex.: `https://desafiotecback-production.up.railway.app`). Ela é lida **no build**; ao mudar, faça um novo deploy.
 3. No backend, defina `WEB_ORIGIN` com a URL deste frontend (CORS).
 
 O nginx escuta em `$PORT` (injetada pela Railway) e devolve `index.html` para qualquer rota (SPA).
+
+## Deploy atual
+
+- Frontend: https://desafiotecfront-production.up.railway.app
+- API (`VITE_API_URL`): https://desafiotecback-production.up.railway.app
 
 ## Estrutura
 

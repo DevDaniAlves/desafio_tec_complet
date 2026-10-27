@@ -6,7 +6,7 @@ O Nexo Assist é um agent de service desk de TI. O funcionário descreve o probl
 
 | O quê | Onde |
 |---|---|
-| Aplicação (frontend) | `https://<seu-frontend>.up.railway.app` |
+| Aplicação (frontend) | `https://desafiotecfront-production.up.railway.app` |
 | API (backend) | `https://desafiotecback-production.up.railway.app` (teste: `/api/health`) |
 | **WhatsApp de testes** | **+55 (65) 99232-6088** · [abrir conversa](https://wa.me/5565992326088) |
 

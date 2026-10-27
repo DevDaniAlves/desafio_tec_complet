@@ -2,6 +2,8 @@
 
 > **Como usar e testar (contas, roteiro e WhatsApp): [GUIA_DE_USO.md](GUIA_DE_USO.md)**
 
+**Publicado na Railway:** [aplicação](https://desafiotecfront-production.up.railway.app) · [API](https://desafiotecback-production.up.railway.app/api/health)
+
 Dois projetos independentes, cada um com seu repositório git, Dockerfile e README (deploy na Railway):
 
 | Pasta | O que é |

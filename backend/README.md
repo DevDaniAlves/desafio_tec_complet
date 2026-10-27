@@ -49,7 +49,7 @@ Serviços: **Postgres** e **Evolution** (já existentes) + este backend (build p
 | `JWT_SECRET` | **obrigatório** (`node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | conta de admin (sem `ADMIN_PASSWORD` em produção, nenhum admin é criado) |
 | `SEED_PASSWORD` | senha das contas demo (sem ela, em produção as contas demo não conseguem entrar) |
-| `WEB_ORIGIN` | URL do frontend na Railway (CORS), ex.: `https://nexo-web.up.railway.app` |
+| `WEB_ORIGIN` | URL do frontend na Railway (CORS), ex.: `https://desafiotecfront-production.up.railway.app` |
 | `GEMINI_API_KEY` | chave do Gemini (Google AI Studio) |
 | `EVOLUTION_API_URL` | URL da Evolution (interna `http://<servico>.railway.internal:8080` ou pública) |
 | `EVOLUTION_API_KEY` | chave da Evolution |
@@ -57,6 +57,12 @@ Serviços: **Postgres** e **Evolution** (já existentes) + este backend (build p
 | `PUBLIC_WEBHOOK_URL` | opcional; padrão `https://$RAILWAY_PUBLIC_DOMAIN/api/whatsapp/webhook`. Para tráfego interno: `http://<backend>.railway.internal:<PORT>/api/whatsapp/webhook` |
 
 `NODE_ENV=production` já vem do Dockerfile. Healthcheck: `GET /api/health`. Para dados reais (sem demo) use `SEED_ON_START=false`.
+
+## Deploy atual
+
+- API: https://desafiotecback-production.up.railway.app (`/api/health`)
+- Frontend: https://desafiotecfront-production.up.railway.app
+- No backend, `WEB_ORIGIN` = URL do frontend; no frontend, `VITE_API_URL` = URL da API.
 
 ## Arquitetura
 
