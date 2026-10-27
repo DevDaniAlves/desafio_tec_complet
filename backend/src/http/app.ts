@@ -269,7 +269,8 @@ export async function buildApp(d: AppDeps) {
   if (d.whatsapp) {
     const wa = d.whatsapp;
     app.post('/api/whatsapp/webhook', { config: { rateLimit: { max: 300, timeWindow: '1 minute' } } }, async (req, reply) => {
-      const status = await wa.handleWebhook(req.headers['x-webhook-secret'] as string | undefined, req.body);
+      const query = (req.query as { secret?: string }).secret;
+      const status = await wa.handleWebhook({ header: req.headers['x-webhook-secret'] as string | undefined, query }, req.body);
       return reply.code(status).send({ ok: status < 300 });
     });
   }

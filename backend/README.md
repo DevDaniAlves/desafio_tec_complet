@@ -32,7 +32,7 @@ Contas têm senha (hash **scrypt**, sem dependências) e o login devolve um **JW
 
 ## WhatsApp (Evolution API)
 
-1. Configure `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_WEBHOOK_SECRET` e a **URL do webhook** em `PUBLIC_WEBHOOK_URL` (na Railway pode ficar vazia: usa `https://$RAILWAY_PUBLIC_DOMAIN/api/whatsapp/webhook`).
+1. Configure `EVOLUTION_API_URL`, `EVOLUTION_API_KEY` e a **URL do webhook** em `PUBLIC_WEBHOOK_URL` (na Railway pode ficar vazia: usa `https://$RAILWAY_PUBLIC_DOMAIN/api/whatsapp/webhook`).
 2. Ao subir, o backend **cria a instância e registra o webhook** na Evolution sozinho (com novas tentativas se a Evolution ainda estiver subindo). Daí em diante, cada mensagem recebida no WhatsApp chega em `POST /api/whatsapp/webhook`, o agent responde e a resposta volta pela Evolution.
 3. Entre no frontend como **admin** → **WhatsApp** → *Criar conexão e gerar QR code* e leia o QR no celular do bot (Aparelhos conectados). A tela mostra o estado da conexão e permite desconectar e re-registrar o webhook.
 4. Na mesma tela, vincule o **celular de cada funcionário** (DDI+DDD+número). É por esse número que o WhatsApp identifica quem fala; números desconhecidos recebem um aviso e **não acessam nada**.
@@ -52,7 +52,8 @@ Serviços: **Postgres** e **Evolution** (já existentes) + este backend (build p
 | `WEB_ORIGIN` | URL do frontend na Railway (CORS), ex.: `https://nexo-web.up.railway.app` |
 | `GEMINI_API_KEY` | chave do Gemini (ou `LLM_PROVIDER=anthropic` + `ANTHROPIC_API_KEY`) |
 | `EVOLUTION_API_URL` | URL da Evolution (interna `http://<servico>.railway.internal:8080` ou pública) |
-| `EVOLUTION_API_KEY` / `EVOLUTION_WEBHOOK_SECRET` | chave da Evolution / segredo do webhook |
+| `EVOLUTION_API_KEY` | chave da Evolution |
+| `EVOLUTION_WEBHOOK_SECRET` | **opcional**. Se definido, o webhook exige o segredo no header `x-webhook-secret` **ou** em `?secret=` na `PUBLIC_WEBHOOK_URL` (use a query se a sua Evolution não envia headers). Vazio = sem verificação (só confere a instância) |
 | `PUBLIC_WEBHOOK_URL` | opcional; padrão `https://$RAILWAY_PUBLIC_DOMAIN/api/whatsapp/webhook`. Para tráfego interno: `http://<backend>.railway.internal:<PORT>/api/whatsapp/webhook` |
 
 `NODE_ENV=production` já vem do Dockerfile. Healthcheck: `GET /api/health`. Para dados reais (sem demo) use `SEED_ON_START=false`.

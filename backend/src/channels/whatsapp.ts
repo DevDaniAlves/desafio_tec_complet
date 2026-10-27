@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import type { ChatEngine } from '../agent/engine.js';
 import type { AuthService } from '../services/authService.js';
@@ -8,6 +9,7 @@ import { renderForWhatsApp } from './render.js';
 
 const webhookSchema = z.object({
   event: z.string(),
+  instance: z.string().optional(),
   data: z
     .object({
       key: z.object({
@@ -30,6 +32,17 @@ const webhookSchema = z.object({
 
 const digits = (jid: string) => jid.split('@')[0]!.replace(/\D/g, '');
 
+const safeEqual = (a: string | undefined, b: string): boolean => {
+  if (a === undefined || a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+};
+
+/** Como a Evolution se identificou no webhook: header `x-webhook-secret` ou `?secret=` na própria URL. */
+export interface WebhookCredentials {
+  header?: string | undefined;
+  query?: string | undefined;
+}
+
 export class WhatsAppChannel {
   private readonly phoneByConversation = new Map<string, string>();
 
@@ -38,7 +51,9 @@ export class WhatsAppChannel {
     private readonly engine: ChatEngine,
     private readonly auth: AuthService,
     private readonly conversations: ConversationService,
+    /** Vazio = webhook aberto (a verificação da instância continua valendo). */
     private readonly secret: string,
+    private readonly instance: string,
   ) {}
 
   /** Mensagens do agent/analista/sistema numa conversa cujo último canal foi o WhatsApp vão para o celular. */
@@ -80,11 +95,13 @@ export class WhatsAppChannel {
   }
 
   /** Retorna o status HTTP a responder à Evolution. 2xx sempre que a mensagem foi "tratada" (inclusive ignorada). */
-  async handleWebhook(secretHeader: string | undefined, body: unknown): Promise<number> {
-    if (!this.secret || secretHeader !== this.secret) return 401;
+  async handleWebhook(creds: WebhookCredentials, body: unknown): Promise<number> {
+    // Segredo opcional: se configurado, precisa chegar no header OU no query string da URL do webhook.
+    if (this.secret && !safeEqual(creds.header, this.secret) && !safeEqual(creds.query, this.secret)) return 401;
     const parsed = webhookSchema.safeParse(body);
     if (!parsed.success) return 200;
-    const { event, data } = parsed.data;
+    const { event, data, instance } = parsed.data;
+    if (instance && instance !== this.instance) return 200; // evento de outra instância: ignora
     if (event.toLowerCase().replace(/_/g, '.') !== 'messages.upsert') return 200;
     if (data.key.fromMe || data.key.remoteJid.endsWith('@g.us') || data.key.remoteJid === 'status@broadcast') return 200;
 

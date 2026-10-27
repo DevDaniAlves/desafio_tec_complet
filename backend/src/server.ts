@@ -66,7 +66,8 @@ else console.warn(`[nexo] Chave do provedor "${config.LLM_PROVIDER}" ausente (${
 const engine = new ChatEngine({ conversations, tickets, kb, runner, sessionLimit: config.SESSION_MESSAGE_LIMIT, modelName: llm?.id ?? 'indisponível' });
 
 const evolution = new EvolutionClient(config);
-const whatsapp = new WhatsAppChannel(evolution, engine, auth, conversations, config.EVOLUTION_WEBHOOK_SECRET);
+const whatsapp = new WhatsAppChannel(evolution, engine, auth, conversations, config.EVOLUTION_WEBHOOK_SECRET, config.EVOLUTION_INSTANCE);
+if (evolution.enabled && !config.EVOLUTION_WEBHOOK_SECRET) console.warn('[nexo] WhatsApp: EVOLUTION_WEBHOOK_SECRET vazio, o webhook aceita qualquer origem (só confere a instância). Considere usar ?secret= na PUBLIC_WEBHOOK_URL.');
 whatsapp.attach(broker);
 
 const hookUrl = webhookUrl(config);
