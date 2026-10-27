@@ -1,0 +1,23 @@
+# Postgres local do Nexo Assist (em produção use o Postgres da Railway).
+# Uso: docker compose up -d   →  postgres://nexo:nexo@localhost:5442/nexo
+name: desafio-tec
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5442:5432"
+    environment:
+      POSTGRES_USER: nexo
+      POSTGRES_PASSWORD: nexo
+      POSTGRES_DB: nexo
+    volumes:
+      - nexo_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexo -d nexo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  nexo_pg:
