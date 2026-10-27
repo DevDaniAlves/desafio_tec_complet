@@ -1,6 +1,6 @@
 # Nexo Assist
 
-> **Como usar e testar (contas, roteiro e WhatsApp): [GUIA_DE_USO.md](GUIA_DE_USO.md)**
+> **Resumo para envio: [RESUMO.md](RESUMO.md)** · **Guia completo (contas, roteiro e WhatsApp): [GUIA_DE_USO.md](GUIA_DE_USO.md)**
 
 **Publicado na Railway:** [aplicação](https://desafiotecfront-production.up.railway.app) · [API](https://desafiotecback-production.up.railway.app/api/health)
 
