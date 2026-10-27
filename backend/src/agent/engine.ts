@@ -5,6 +5,7 @@ import type { Conversation, ConversationService, Message } from '../services/con
 import type { KbService } from '../services/kbService.js';
 import { LegacyUnavailableError, type TicketService } from '../services/ticketService.js';
 import type { AgentRunner, Final, FinalAction } from './context.js';
+import { describeLlmError } from './llmErrors.js';
 
 const HISTORY_WINDOW = 24;
 const LOW_CONFIDENCE = 0.5;
@@ -24,13 +25,6 @@ export const toCard = (t: TicketView): TicketCard => ({
 
 const teamFor = (trigger: string) => (trigger === 'low_confidence' ? 'Suporte N1' : 'Suporte N2');
 const handoffSla = (trigger: string) => (trigger === 'critical' ? '1 hora (plantão 24h)' : '2 horas úteis');
-
-/** Distingue limite de cota/sobrecarga do provedor (vale tentar de novo) de falhas reais. */
-export function describeLlmError(e: unknown): { busy: boolean; message: string } {
-  const text = [e instanceof Error ? e.message : String(e), (e as { cause?: { message?: string } })?.cause?.message ?? ''].join(' ');
-  const busy = /quota|rate.?limit|429|RESOURCE_EXHAUSTED|overload|503|unavailable|high demand|try again later/i.test(text);
-  return { busy, message: text.replace(/\s+/g, ' ').trim().slice(0, 300) };
-}
 
 export interface EngineDeps {
   conversations: ConversationService;
@@ -257,12 +251,13 @@ export class ChatEngine {
 
       await this.applyAction(employee, conv, channel, action, trace);
     } catch (e) {
-      console.error('[engine] agent failed', e);
       const detail = describeLlmError(e);
+      console.error(`[engine] agent failed (${detail.busy ? 'cota/sobrecarga' : 'erro'}): ${detail.message.slice(0, 160)}`);
+      const wait = detail.retryAfter ? ` (cerca de ${Math.ceil(detail.retryAfter)} s)` : '';
       await cs.addMessage(conv.id, {
         role: 'assistant',
         text: detail.busy
-          ? 'Estou com muitas solicitações ao mesmo tempo. Aguarde alguns segundos e envie sua mensagem de novo.'
+          ? `Estou com muitas solicitações ao mesmo tempo. Aguarde um pouco${wait} e envie sua mensagem de novo.`
           : 'Tive um problema técnico para processar sua mensagem. Tente de novo em instantes ou peça um analista.',
         trace: this.errorTrace(this.d.modelName, detail.message, [], 0),
         channel,

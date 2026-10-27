@@ -59,9 +59,9 @@ const conversations = new ConversationService(db, broker);
 const tickets = new TicketService(db, { failureRate: config.LEGACY_FAILURE_RATE });
 const kb = new KbService(db);
 const llm = resolveModel(config);
-const runner = llm ? new MastraRunner(llm) : null;
-if (llm) console.log(`[nexo] LLM: ${llm.provider} / ${llm.id}`);
-else console.warn(`[nexo] Chave do provedor "${config.LLM_PROVIDER}" ausente (${config.LLM_PROVIDER === 'google' ? 'GEMINI_API_KEY' : 'ANTHROPIC_API_KEY'}): o chat responderá que o assistente não está configurado.`);
+const runner = llm ? new MastraRunner(llm, config.LLM_CONCURRENCY) : null;
+if (llm) console.log(`[nexo] LLM: Gemini / ${llm.id}${llm.fallback ? ` (reserva: ${llm.fallback.id})` : ''}`);
+else console.warn('[nexo] GEMINI_API_KEY ausente: o chat responderá que o assistente não está configurado.');
 
 const engine = new ChatEngine({ conversations, tickets, kb, runner, sessionLimit: config.SESSION_MESSAGE_LIMIT, modelName: llm?.id ?? 'indisponível' });
 

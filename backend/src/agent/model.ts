@@ -1,32 +1,35 @@
-import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import type { Agent } from '@mastra/core/agent';
 import type { Config } from '../config.js';
 
 export type AgentModel = ConstructorParameters<typeof Agent>[0]['model'];
 
-export const DEFAULT_MODEL = { google: 'gemini-3.5-flash', anthropic: 'claude-haiku-5-5' } as const;
+export const DEFAULT_MODEL = 'gemini-3.5-flash';
+/** Modelo reserva quando o principal estoura a cota (a cota do Gemini é por modelo). */
+export const DEFAULT_FALLBACK = 'gemini-3.1-flash-lite';
 
-/** Escolhe o provedor de LLM pela configuração. Retorna null quando falta a chave (o chat avisa o usuário). */
 export interface ResolvedModel {
   model: AgentModel;
   id: string;
-  provider: string;
-  /** Ajustes por provedor (ex.: reduzir o "thinking" do Gemini para cortar latência e custo). */
-  providerOptions?: Record<string, Record<string, unknown>>;
+  /** Ajustes do Gemini (ex.: reduzir o "thinking" para cortar latência e custo). */
+  providerOptions: Record<string, Record<string, unknown>>;
+  /** Usado automaticamente se o principal der 429/503. */
+  fallback?: Omit<ResolvedModel, 'fallback'>;
 }
 
-export function resolveModel(cfg: Pick<Config, 'LLM_PROVIDER' | 'GEMINI_API_KEY' | 'ANTHROPIC_API_KEY' | 'AGENT_MODEL' | 'GEMINI_THINKING'>): ResolvedModel | null {
-  const id = cfg.AGENT_MODEL || DEFAULT_MODEL[cfg.LLM_PROVIDER];
-  if (cfg.LLM_PROVIDER === 'google') {
-    if (!cfg.GEMINI_API_KEY) return null;
-    return {
-      model: createGoogleGenerativeAI({ apiKey: cfg.GEMINI_API_KEY })(id),
-      id,
-      provider: 'google',
-      providerOptions: { google: { thinkingConfig: { thinkingLevel: cfg.GEMINI_THINKING } } },
-    };
-  }
-  if (!cfg.ANTHROPIC_API_KEY) return null;
-  return { model: createAnthropic({ apiKey: cfg.ANTHROPIC_API_KEY })(id), id, provider: 'anthropic' };
+type ModelConfig = Pick<Config, 'GEMINI_API_KEY' | 'AGENT_MODEL' | 'AGENT_FALLBACK_MODEL' | 'GEMINI_THINKING'>;
+
+/** Monta o modelo Gemini da configuração. Retorna null sem a chave (o chat avisa o usuário). */
+export function resolveModel(cfg: ModelConfig): ResolvedModel | null {
+  if (!cfg.GEMINI_API_KEY) return null;
+  const google = createGoogleGenerativeAI({ apiKey: cfg.GEMINI_API_KEY });
+  const id = cfg.AGENT_MODEL || DEFAULT_MODEL;
+  const fallbackId = cfg.AGENT_FALLBACK_MODEL === 'off' ? '' : cfg.AGENT_FALLBACK_MODEL || DEFAULT_FALLBACK;
+
+  const build = (modelId: string) => ({
+    model: google(modelId),
+    id: modelId,
+    providerOptions: { google: { thinkingConfig: { thinkingLevel: cfg.GEMINI_THINKING } } },
+  });
+  return { ...build(id), ...(fallbackId && fallbackId !== id ? { fallback: build(fallbackId) } : {}) };
 }

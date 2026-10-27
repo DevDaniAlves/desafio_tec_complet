@@ -2,7 +2,7 @@
 
 API do Nexo Assist: agent de service desk de TI da Nexo. O funcionário descreve o problema numa conversa (no **site** ou no **WhatsApp**) e o agent consulta os chamados dele, busca na central de ajuda, abre/atualiza chamados (sempre com confirmação) e chama um analista quando precisa. O analista atende pelo **console** e o admin conecta o **WhatsApp**.
 
-Node 22 · TypeScript estrito · Fastify · PostgreSQL (`pg`) · **Mastra** + Gemini/Claude · JWT (`jose`) · Evolution API v2.
+Node 22 · TypeScript estrito · Fastify · PostgreSQL (`pg`) · **Mastra** + Google Gemini · JWT (`jose`) · Evolution API v2.
 O frontend fica em outro repositório (`nexo-assist-frontend`) e fala com esta API por HTTP + SSE.
 
 ## Rodar localmente
@@ -50,7 +50,7 @@ Serviços: **Postgres** e **Evolution** (já existentes) + este backend (build p
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | conta de admin (sem `ADMIN_PASSWORD` em produção, nenhum admin é criado) |
 | `SEED_PASSWORD` | senha das contas demo (sem ela, em produção as contas demo não conseguem entrar) |
 | `WEB_ORIGIN` | URL do frontend na Railway (CORS), ex.: `https://nexo-web.up.railway.app` |
-| `GEMINI_API_KEY` | chave do Gemini (ou `LLM_PROVIDER=anthropic` + `ANTHROPIC_API_KEY`) |
+| `GEMINI_API_KEY` | chave do Gemini (Google AI Studio) |
 | `EVOLUTION_API_URL` | URL da Evolution (interna `http://<servico>.railway.internal:8080` ou pública) |
 | `EVOLUTION_API_KEY` | chave da Evolution |
 | `EVOLUTION_WEBHOOK_SECRET` | **opcional**. Se definido, o webhook exige o segredo no header `x-webhook-secret` **ou** em `?secret=` na `PUBLIC_WEBHOOK_URL` (use a query se a sua Evolution não envia headers). Vazio = sem verificação (só confere a instância) |
@@ -101,7 +101,7 @@ Toda ferramenta terminal exige `intent`, `understood`, `confidence` (0–1) e `r
 
 ## Modelo e custo
 
-Padrão `gemini-3.5-flash` (rápido e barato; `GEMINI_THINKING=low` reduz latência). `claude-haiku-5-5` via `LLM_PROVIDER=anthropic`. Custo por conversa contido por: máx. 6 passos, `maxOutputTokens` 1200, histórico de 24 mensagens, agent pausado fora de `agent`, confirmação sem LLM e descrições de ferramentas enxutas. Tokens e latência de cada resposta ficam no trace. Atenção: no plano gratuito do Gemini o limite é baixo (≈5 req/min) e cada resposta usa 2–3 chamadas.
+Padrão `gemini-3.5-flash` (rápido e barato; `GEMINI_THINKING=low` reduz latência). Se o modelo principal estourar a cota (429/503), o agent tenta sozinho o modelo reserva `gemini-3.1-flash-lite` (a cota do Gemini é por modelo; `AGENT_FALLBACK_MODEL`), e `LLM_CONCURRENCY` limita quantos turnos chamam o LLM ao mesmo tempo. Custo por conversa contido por: máx. 6 passos, `maxOutputTokens` 1200, histórico de 24 mensagens, agent pausado fora de `agent`, confirmação sem LLM e descrições de ferramentas enxutas. Tokens e latência de cada resposta ficam no trace. Atenção: no plano gratuito do Gemini o limite é baixo (≈5 req/min) e cada resposta usa 2–3 chamadas.
 
 ## Trade-offs e próximos passos
 

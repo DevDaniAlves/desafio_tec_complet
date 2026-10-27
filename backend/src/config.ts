@@ -12,13 +12,15 @@ const schema = z.object({
   ADMIN_EMAIL: z.string().default('admin@nexo.com.br'),
   ADMIN_PASSWORD: z.string().default(''),
   DATABASE_URL: z.string().default('postgres://nexo:nexo@localhost:5442/nexo'),
-  LLM_PROVIDER: z.enum(['google', 'anthropic']).default('google'),
   GEMINI_API_KEY: z.string().default(''),
   // Quanto o Gemini 3.x "pensa" antes de responder: low = mais rápido e barato
   GEMINI_THINKING: z.enum(['low', 'medium', 'high']).default('low'),
-  ANTHROPIC_API_KEY: z.string().default(''),
-  // Vazio = padrão do provedor (gemini-3.5-flash / claude-haiku-5-5)
+  // Vazio = gemini-3.5-flash
   AGENT_MODEL: z.string().default(''),
+  // Modelo reserva se o principal estourar a cota (vazio = gemini-3.1-flash-lite; 'off' desliga)
+  AGENT_FALLBACK_MODEL: z.string().default(''),
+  // Quantos turnos do agent podem chamar o LLM ao mesmo tempo
+  LLM_CONCURRENCY: z.coerce.number().int().min(1).default(2),
   SESSION_MESSAGE_LIMIT: z.coerce.number().default(30),
   LEGACY_FAILURE_RATE: z.coerce.number().min(0).max(1).default(0),
   EVOLUTION_API_URL: z.string().default(''),

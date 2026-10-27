@@ -89,6 +89,34 @@ export class WhatsAppChannel {
     }
   }
 
+  /** IDs de mensagem já vistos, com validade (memória limitada). */
+  private readonly seen = new Map<string, number>();
+  /** Última vez que avisamos cada remetente (evita responder o mesmo aviso a cada mensagem). */
+  private readonly notified = new Map<string, number>();
+
+  private static prune(map: Map<string, number>, now: number): void {
+    if (map.size < 500) return;
+    for (const [k, until] of map) if (until <= now) map.delete(k);
+  }
+
+  /** true só na primeira vez que o ID aparece (check-and-set síncrono: sem corrida entre cópias simultâneas). */
+  private firstSight(id: string): boolean {
+    const now = Date.now();
+    WhatsAppChannel.prune(this.seen, now);
+    if ((this.seen.get(id) ?? 0) > now) return false;
+    this.seen.set(id, now + 15 * 60_000);
+    return true;
+  }
+
+  /** true no máximo uma vez por `windowMs` para a mesma chave. */
+  private shouldNotify(key: string, windowMs: number): boolean {
+    const now = Date.now();
+    WhatsAppChannel.prune(this.notified, now);
+    if ((this.notified.get(key) ?? 0) > now) return false;
+    this.notified.set(key, now + windowMs);
+    return true;
+  }
+
   private async typing(conversationId: string): Promise<void> {
     const phone = await this.phoneOf(conversationId);
     if (phone) await this.client.composing(phone).catch(() => undefined);
@@ -105,17 +133,27 @@ export class WhatsAppChannel {
     if (event.toLowerCase().replace(/_/g, '.') !== 'messages.upsert') return 200;
     if (data.key.fromMe || data.key.remoteJid.endsWith('@g.us') || data.key.remoteJid === 'status@broadcast') return 200;
 
+    // A Evolution pode entregar o mesmo evento mais de uma vez (às vezes no mesmo milissegundo).
+    // A checagem é síncrona de propósito: duas cópias simultâneas não podem passar as duas.
+    if (!this.firstSight(data.key.id)) return 200;
+
     // Em contas com LID o número real vem em senderPn/remoteJidAlt.
     const number = digits(data.key.senderPn ?? data.key.remoteJidAlt ?? data.key.remoteJid);
     const text = data.message?.conversation ?? data.message?.extendedTextMessage?.text;
 
     const employee = await this.auth.byPhone(number);
     if (!employee) {
-      await this.client.sendText(number, 'Olá! Não encontrei este número no cadastro de funcionários da Nexo. Peça ao service desk (ramal 4000) para vinculá-lo.').catch(() => undefined);
+      const lid = data.key.remoteJid.endsWith('@lid') && !data.key.senderPn && !data.key.remoteJidAlt;
+      console.warn(`[whatsapp] remetente sem cadastro (final ${number.slice(-4)}${lid ? ', jid @lid sem número real: a Evolution não informou remoteJidAlt/senderPn' : ''})`);
+      if (this.shouldNotify(`unknown:${number}`, 60 * 60_000)) {
+        await this.client.sendText(number, 'Olá! Não encontrei este número no cadastro de funcionários da Nexo. Peça ao service desk (ramal 4000) para vinculá-lo.').catch(() => undefined);
+      }
       return 200;
     }
     if (!text?.trim()) {
-      await this.client.sendText(number, 'Por enquanto só consigo ler mensagens de texto. Pode escrever o que precisa?').catch(() => undefined);
+      if (this.shouldNotify(`notext:${number}`, 10 * 60_000)) {
+        await this.client.sendText(number, 'Por enquanto só consigo ler mensagens de texto. Pode escrever o que precisa?').catch(() => undefined);
+      }
       return 200;
     }
     // Processa em segundo plano para responder rápido ao webhook (a Evolution reenvia se demorar).

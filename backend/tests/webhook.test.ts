@@ -45,3 +45,23 @@ describe('webhook do WhatsApp', () => {
     expect(sent).toHaveLength(0);
   });
 });
+
+describe('webhook: duplicidade e avisos repetidos', () => {
+  it('a mesma mensagem entregue várias vezes ao mesmo tempo é processada uma única vez', async () => {
+    const { s, wa } = await channel('');
+    await s.db.run("UPDATE employees SET phone = '5511999990000' WHERE id = 'e-ana'");
+    await Promise.all([wa.handleWebhook({}, upsert()), wa.handleWebhook({}, upsert()), wa.handleWebhook({}, upsert()), wa.handleWebhook({}, upsert())]);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(s.runner.calls.length).toBe(1);
+    const conv = (await s.conversations.latest('e-ana'))!;
+    expect((await s.conversations.messages(conv.id)).filter((m) => m.role === 'user')).toHaveLength(1);
+  });
+
+  it('número sem cadastro recebe o aviso uma vez só, mesmo mandando várias mensagens', async () => {
+    const { wa, sent } = await channel('');
+    for (const id of ['M1', 'M2', 'M3']) {
+      await wa.handleWebhook({}, upsert({ data: { key: { id, remoteJid: '5511977770000@s.whatsapp.net', fromMe: false }, message: { conversation: 'Ola' } } }));
+    }
+    expect(sent.filter((t) => /não encontrei este número/i.test(t))).toHaveLength(1);
+  });
+});
